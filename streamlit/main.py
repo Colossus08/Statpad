@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.neighbors import NearestNeighbors
+from streamlit_carousel import carousel
 
 st.set_page_config(
     page_title="Player Comparison",
@@ -35,6 +36,10 @@ if 'positions_similar_to_b' not in st.session_state:
     st.session_state.positions_similar_to_b=[]
 if 'graph_player_selection' not in st.session_state:
     st.session_state.graph_player_selection=st.session_state.player1
+if 'counter1' not in st.session_state:
+    st.session_state.counter1=0
+if 'counter2' not in st.session_state:
+    st.session_state.counter2=0
 
 
 
@@ -54,12 +59,6 @@ def update_player_name(playerName1,playerName2):
     st.session_state.player1_pos=final_df[final_df['name']==f'{st.session_state.player1}']['positions'].iloc[0].split(',')[0]
     st.session_state.player2=playerName2
     st.session_state.player2_pos=final_df[final_df['name']==f'{st.session_state.player2}']['positions'].iloc[0].split(',')[0]
-        # else:
-        #     st.session_state.player1=playerName1
-        # if 'player2' not in st.session_state:
-        #     st.session_state.player2=playerName2
-        # else:
-        #     st.session_state.player2=playerName2
 
 
 with st.sidebar:
@@ -156,38 +155,7 @@ else:
 st.divider()
 
 if (st.session_state.player1!='' and st.session_state.player2!=''):
-    
-    # percentile_df=final_df.copy()
-    # single_position_column=percentile_df['positions'].to_list()
-    # for count in range(len(single_position_column)):
-    #     single_position_column[count]=single_position_column[count].split(',')[0]
-    #     print(single_position_column[count])
-    # percentile_df['positions']=single_position_column
-    
-    # player_a_percentile_df=percentile_df.loc[percentile_df['positions']==st.session_state.player1_pos]
-    # player_b_percentile_df=percentile_df.loc[percentile_df['positions']==st.session_state.player2_pos]
-    
-    
-    # st.dataframe(player_a_percentile_df)
-    
-    # percentile_ranks_a = [stats.percentileofscore(player_a_percentile_df[feature1], player_a[feature1], kind='rank'),stats.percentileofscore(player_a_percentile_df[feature2], player_a[feature2], kind='rank'),stats.percentileofscore(player_a_percentile_df[feature3], player_a[feature3], kind='rank'),stats.percentileofscore(player_a_percentile_df[feature4], player_a[feature4], kind='rank')]
-    # percentile_ranks_b = [stats.percentileofscore(player_b_percentile_df[feature1], player_b[feature1], kind='rank'),stats.percentileofscore(player_b_percentile_df[feature2], player_b[feature2], kind='rank'),stats.percentileofscore(player_b_percentile_df[feature3], player_b[feature3], kind='rank'),stats.percentileofscore(player_b_percentile_df[feature4], player_b[feature4], kind='rank')]
-    # percentile_ranks_max = [stats.percentileofscore(player_a_percentile_df[feature1],player_a_percentile_df[feature1].max() , kind='rank'),stats.percentileofscore(player_a_percentile_df[feature2],player_a_percentile_df[feature2].max(), kind='rank'),stats.percentileofscore(player_a_percentile_df[feature3], player_a_percentile_df[feature3].max(), kind='rank'),stats.percentileofscore(player_a_percentile_df[feature4], player_a_percentile_df[feature4].max(), kind='rank')]
-    
-    
-    # fig = go.Figure()
-    
-    # x=[feature1,feature2,feature3,feature4]
 
-    # fig.add_trace(go.Bar(name='Highest percentile', x=x, y=percentile_ranks_max))
-    # fig.add_trace(go.Bar(name=f'{st.session_state.player1}', x=x, y=percentile_ranks_a))
-    # fig.update_layout(barmode='overlay')
-    
-    
-    # # fig.add_trace()
-    # # fig=px.bar(final_df,x=[1,2,3,4],y=percentile_ranks_max)
-    
-    # st.plotly_chart(fig)
     
     # create df to store only single position
     single_position_column=final_df['positions'].to_list()
@@ -204,38 +172,51 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
         tempdf['SNo']=tempdf.index
         
         required=tempdf[tempdf['name']==f'{playerName}']
+        
+        required_threshold=tempdf[tempdf['name'] == playerName][featureList].iloc[0]
+        
+        tempdf = tempdf[
+            (tempdf[featureList] >= 0.25 * required_threshold).all(axis=1) &
+            (tempdf[featureList] <= 1.75 * required_threshold).all(axis=1)
+        ]
 
-        float_cols = tempdf.drop(columns=['SNo']).select_dtypes(include=['float64','int64']).columns.tolist()
-        transformer = ColumnTransformer(
-        transformers=[
-                ('scale', StandardScaler(), float_cols)
-            ],
-            remainder='passthrough'  # Leave other columns untouched
-        )
+        # print(tempdf)
         
-        print(playerName)
+        # float_cols = tempdf.drop(columns=['SNo']).select_dtypes(include=['float64','int64']).columns.tolist()
+        # transformer = ColumnTransformer(
+        # transformers=[
+        #         ('scale', StandardScaler(), float_cols)
+        #     ],
+        #     remainder='passthrough'  # Leave other columns untouched
+        # )
         
-        transformed = transformer.fit_transform(tempdf)
-        new_columns = float_cols + [col for col in tempdf.columns if col not in float_cols]
-        df_transformed = pd.DataFrame(transformed, columns=new_columns)
-        # df_transformed=df_transformed[df_transformed.columns[::-1]]
+        # print(playerName)
         
-        # required=df_transformed[df_transformed['name']==f'{playerName}']
+        # transformed = transformer.fit_transform(tempdf)
+        # new_columns = float_cols + [col for col in tempdf.columns if col not in float_cols]
+        # df_transformed = pd.DataFrame(transformed, columns=new_columns)
+        # # df_transformed=df_transformed[df_transformed.columns[::-1]]
         
-        df_transformed=df_transformed[df_transformed['name']!=f'{playerName}']
+        # # required=df_transformed[df_transformed['name']==f'{playerName}']
         
+        # # df_transformed=df_transformed[df_transformed['name']!=f'{playerName}']
+        tempdf=tempdf[tempdf['name']!=f'{playerName}']
         
-        nbrs = NearestNeighbors(n_neighbors=11,metric='cosine').fit(tempdf.drop(columns=['SNo','name','team','league','positions'])[featureList])
-        distances, indices = nbrs.kneighbors(required.drop(columns=['SNo','name','positions','team','league'])[featureList])
+        if not tempdf.empty:
+            nbrs = NearestNeighbors(n_neighbors=min(6, len(tempdf)),metric='euclidean').fit(tempdf.drop(columns=['SNo','name','team','league','positions'])[featureList])
+            distances, indices = nbrs.kneighbors(required.drop(columns=['SNo','name','positions','team','league'])[featureList])
+            
+            # print(indices[0])
+            
+            # print("Nearest neighbors (points):", tempdf.iloc[indices[0]])
+            
+            mostSimilarPlayers=tempdf.iloc[indices[0][1:]]
+            # targetPlayer=tempdf.iloc[indices[0][0]]
+            
+            return mostSimilarPlayers[mostSimilarPlayers.columns[::-1]][['name','team','positions']+featureList+['league']]
         
-        # print(indices[0])
-        
-        print("Nearest neighbors (points):", tempdf.iloc[indices[0]])
-        
-        mostSimilarPlayers=tempdf.iloc[indices[0][1:]]
-        # targetPlayer=tempdf.iloc[indices[0][0]]
-        
-        return mostSimilarPlayers[mostSimilarPlayers.columns[::-1]][['name','team','positions']+featureList+['league']]
+        else:
+            return tempdf
     
     
     featureList=[]
@@ -248,61 +229,66 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     if feature4 not in featureList:
         featureList.append(feature4)
         
+        
+    # def createCard(row):
+    #     res=card(
+    #     title=f"{row['name']}",
+    #     text="This is a test card"
+    #     )
+    #     return res
     
     similar1,similar2=st.columns(2)
     
     player1Similar=similarPlayers(st.session_state.player1_pos,st.session_state.player1,featureList)
     
     similar1.text(f'{st.session_state.player1}:')
-    # st.dataframe(player1Similar[0])
+    # # st.dataframe(player1Similar[0])
     similar1.dataframe(final_df[final_df['name']==st.session_state.player1][['name','team','positions']+featureList+['league']].reset_index(drop=True))
     
-    similar1.text('Similar Players:')
-    similar1.dataframe(player1Similar.reset_index(drop=True))
+    print('PLAYER 1 SIMILAR')
+    print(player1Similar)
     
+    similar1.text('Similar Players:')
+    similar1.dataframe(player1Similar.iloc[(st.session_state.counter1%5)].transpose())
+    buttons1=similar1.columns(2)
+    if buttons1[0].button('<-',use_container_width=True):
+        if (st.session_state.counter1>=1):
+            st.session_state.counter1-=1
+    if buttons1[1].button('->',use_container_width=True):
+        if st.session_state.counter1<=3:
+            st.session_state.counter1+=1
+    
+    
+    # createCard(player1Similar.iloc[(st.session_state.counter1%5)])
+    # st.text(st.session_state.counter1)
+    # buttons1=st.columns(2)
+    # if buttons1[0].button('<'):
+    #     if (st.session_state.counter1>=1):
+    #         st.session_state.counter1-=1
+    # if buttons1[1].button('>'):
+    #     if st.session_state.counter1<=3:
+    #         st.session_state.counter1+=1
+    
+    print('counter value:',st.session_state.counter1)
     
     
     player2Similar=similarPlayers(st.session_state.player2_pos,st.session_state.player2,featureList)
+    
+    print('PLAYER 2 SIMILAR')
+    print(player2Similar)
     
     similar2.text(f'{st.session_state.player2}:')
     # st.dataframe(player1Similar[0])
     similar2.dataframe(final_df[final_df['name']==st.session_state.player2][['name','team','positions']+featureList+['league']].reset_index(drop=True))
     
     similar2.text('Similar Players:')
-    similar2.dataframe(player2Similar.reset_index(drop=True))
+    similar2.dataframe(player2Similar.iloc[(st.session_state.counter2%5)])
+    # st.text(st.session_state.counter1)
+    buttons2=similar2.columns(2)
+    if buttons2[0].button('<- ',use_container_width=True):
+        if (st.session_state.counter2>=1):
+            st.session_state.counter2-=1
+    if buttons2[1].button(' ->',use_container_width=True):
+        if st.session_state.counter2<=3:
+            st.session_state.counter2+=1
     
-    
-    # create df to filter out only selected player position
-    # singling out the selected player to be used for KNN
-#     temp=final_df[final_df['positions']=='FW'].fillna(0)
-#     required=temp[temp['name']=='Harry Kane']
-    
-#     float_cols = temp.drop(columns=['SNo']).select_dtypes(include=['float64','int64']).columns.tolist()
-
-#     # Define transformer
-#     transformer = ColumnTransformer(
-#         transformers=[
-#             ('scale', StandardScaler(), float_cols)
-#         ],
-#         remainder='passthrough'  # Leave other columns untouched
-#     )
-
-#     # Fit and transform
-#     transformed = transformer.fit_transform(temp)
-
-#     # Convert back to DataFrame with updated column names
-#     new_columns = float_cols + [col for col in temp.columns if col not in float_cols]
-#     df_transformed = pd.DataFrame(transformed, columns=new_columns)
-
-#     df_transformed=df_transformed[df_transformed.columns[::-1]]
-    
-#     nbrs = NearestNeighbors(n_neighbors=11,metric='manhattan').fit(df_transformed.drop(columns=['SNo','name','team','league','positions'])[['gls','ast']])
-
-# # Find neighbors to the query_point
-#     distances, indices = nbrs.kneighbors(df_transformed[df_transformed['SNo']==1].drop(columns=['SNo','name','positions','team','league'])[['gls','ast']])
-
-    # # Show results
-    # display("Query point:", required)
-    # print("Nearest neighbors (indices):", indices[0][1:])
-    # display("Nearest neighbors (points):", temp.iloc[indices[0][1:]])
-    # print("Distances:", distances[0])
