@@ -55,10 +55,14 @@ def search_player(searchterm: str) -> list:
     return [item for item in final_df['name'] if searchterm.lower() in item.lower()]
 
 def update_player_name(playerName1,playerName2):
-    st.session_state.player1=playerName1 
-    st.session_state.player1_pos=final_df[final_df['name']==f'{st.session_state.player1}']['positions'].iloc[0].split(',')[0]
-    st.session_state.player2=playerName2
-    st.session_state.player2_pos=final_df[final_df['name']==f'{st.session_state.player2}']['positions'].iloc[0].split(',')[0]
+    if playerName1!='' and playerName2!='' and playerName1!=None and playerName2!=None:
+        print('playername in function',playerName1)
+        st.session_state.player1=playerName1 
+        st.session_state.player1_pos=final_df[final_df['name']==f'{st.session_state.player1}']['positions'].iloc[0].split(',')[0]
+        st.session_state.player2=playerName2
+        st.session_state.player2_pos=final_df[final_df['name']==f'{st.session_state.player2}']['positions'].iloc[0].split(',')[0]
+        st.session_state.counter1=0;
+        st.session_state.counter2=0;
 
 
 with st.sidebar:
@@ -108,7 +112,6 @@ with st.container(border=True):
     )
 
 # creating radar chart
-categories = ['progressive passes','key passes','live pass leading to shot','take on leading to shot','goal creation actions']
 
 if (st.session_state.player1!='' and st.session_state.player2!=''):
     
@@ -124,12 +127,18 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     fig.add_trace(go.Scatterpolar(
         r=player_a,
         theta=[feature1,feature2,feature3,feature4],
+        mode='lines+markers+text',
+        text=[str(v) for v in player_a],
+        textposition='top right',
         fill='toself',
         name=f'{st.session_state.player1}'
     ))
     fig.add_trace(go.Scatterpolar(
         r=player_b,
         theta=[feature1,feature2,feature3,feature4],
+        mode='lines+markers+text',
+        text=[str(v) for v in player_b],
+        textposition='bottom left',
         fill='toself',
         name=f'{st.session_state.player2}',
         line=dict(
@@ -141,7 +150,7 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     polar=dict(
         bgcolor='#1e2130',
         radialaxis=dict(
-        visible=True,
+        visible=False,
         range=[0,val_max+10]
         )),
     showlegend=True
@@ -228,14 +237,6 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
         featureList.append(feature3)
     if feature4 not in featureList:
         featureList.append(feature4)
-        
-        
-    # def createCard(row):
-    #     res=card(
-    #     title=f"{row['name']}",
-    #     text="This is a test card"
-    #     )
-    #     return res
     
     similar1,similar2=st.columns(2)
     
@@ -249,7 +250,7 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     print(player1Similar)
     
     similar1.text('Similar Players:')
-    similar1.dataframe(player1Similar.iloc[(st.session_state.counter1%5)].transpose())
+    similar1.dataframe(player1Similar.reset_index(drop=True).iloc[(st.session_state.counter1%5)])
     buttons1=similar1.columns(2)
     if buttons1[0].button('<-',use_container_width=True):
         if (st.session_state.counter1>=1):
@@ -257,17 +258,6 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     if buttons1[1].button('->',use_container_width=True):
         if st.session_state.counter1<=3:
             st.session_state.counter1+=1
-    
-    
-    # createCard(player1Similar.iloc[(st.session_state.counter1%5)])
-    # st.text(st.session_state.counter1)
-    # buttons1=st.columns(2)
-    # if buttons1[0].button('<'):
-    #     if (st.session_state.counter1>=1):
-    #         st.session_state.counter1-=1
-    # if buttons1[1].button('>'):
-    #     if st.session_state.counter1<=3:
-    #         st.session_state.counter1+=1
     
     print('counter value:',st.session_state.counter1)
     
@@ -282,7 +272,7 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     similar2.dataframe(final_df[final_df['name']==st.session_state.player2][['name','team','positions']+featureList+['league']].reset_index(drop=True))
     
     similar2.text('Similar Players:')
-    similar2.dataframe(player2Similar.iloc[(st.session_state.counter2%5)])
+    similar2.dataframe(player2Similar.reset_index(drop=True).iloc[(st.session_state.counter2%5)])
     # st.text(st.session_state.counter1)
     buttons2=similar2.columns(2)
     if buttons2[0].button('<- ',use_container_width=True):
