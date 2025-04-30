@@ -188,36 +188,12 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
             (tempdf[featureList] >= 0.25 * required_threshold).all(axis=1) &
             (tempdf[featureList] <= 1.75 * required_threshold).all(axis=1)
         ]
-
-        # print(tempdf)
         
-        # float_cols = tempdf.drop(columns=['SNo']).select_dtypes(include=['float64','int64']).columns.tolist()
-        # transformer = ColumnTransformer(
-        # transformers=[
-        #         ('scale', StandardScaler(), float_cols)
-        #     ],
-        #     remainder='passthrough'  # Leave other columns untouched
-        # )
-        
-        # print(playerName)
-        
-        # transformed = transformer.fit_transform(tempdf)
-        # new_columns = float_cols + [col for col in tempdf.columns if col not in float_cols]
-        # df_transformed = pd.DataFrame(transformed, columns=new_columns)
-        # # df_transformed=df_transformed[df_transformed.columns[::-1]]
-        
-        # # required=df_transformed[df_transformed['name']==f'{playerName}']
-        
-        # # df_transformed=df_transformed[df_transformed['name']!=f'{playerName}']
         tempdf=tempdf[tempdf['name']!=f'{playerName}']
         
         if not tempdf.empty:
             nbrs = NearestNeighbors(n_neighbors=min(6, len(tempdf)),metric='euclidean').fit(tempdf.drop(columns=['SNo','name','team','league','positions'])[featureList])
             distances, indices = nbrs.kneighbors(required.drop(columns=['SNo','name','positions','team','league'])[featureList])
-            
-            # print(indices[0])
-            
-            # print("Nearest neighbors (points):", tempdf.iloc[indices[0]])
             
             mostSimilarPlayers=tempdf.iloc[indices[0][1:]]
             # targetPlayer=tempdf.iloc[indices[0][0]]
