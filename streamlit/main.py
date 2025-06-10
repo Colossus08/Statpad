@@ -12,6 +12,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.neighbors import NearestNeighbors
 from streamlit_carousel import carousel
+import streamlit.components.v1 as components
+
 
 st.set_page_config(
     page_title="Player Comparison",
@@ -83,10 +85,10 @@ with st.sidebar:
     st.button('submit',on_click=update_player_name,args=(player1_name,player2_name))
 
 
-st.text(f'{st.session_state.player1}: {st.session_state.player1_pos}')
-st.text(f'{st.session_state.player2}: {st.session_state.player2_pos}')
+# st.text(f'{st.session_state.player1}: {st.session_state.player1_pos}')
+# st.text(f'{st.session_state.player2}: {st.session_state.player2_pos}')
 
-
+# --------------------------
 
 # option to choose features for comparison
 with st.container(border=True):
@@ -161,6 +163,9 @@ else:
     st.title('Use sidebar to select players to compare')
 
 
+# ---------------
+
+
 st.divider()
 
 if (st.session_state.player1!='' and st.session_state.player2!=''):
@@ -217,6 +222,7 @@ if (st.session_state.player1!='' and st.session_state.player2!=''):
     similar1,similar2=st.columns(2)
     
     player1Similar=similarPlayers(st.session_state.player1_pos,st.session_state.player1,featureList)
+    
     
     similar1.text(f'{st.session_state.player1}:')
     # # st.dataframe(player1Similar[0])
