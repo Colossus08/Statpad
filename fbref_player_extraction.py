@@ -8,11 +8,16 @@ import lxml
 import plotly
 import scipy.stats
 from bs4 import BeautifulSoup
+import re
+import time
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 def init_driver():
     options = Options()
@@ -25,18 +30,26 @@ def init_driver():
     return driver
 
 
-def get_fbref_firefox(driver, url):
-    """Fetch the HTML source using an existing WebDriver instance."""
+def get_fbref_chrome(driver, url, table_id):
     driver.get(url)
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.ID, table_id))
+    )
     return driver.page_source  # Return full page source
 
 
-def getPlayerStats(team_code_list,league_id,csv_name, team_names, league_name):
+def getPlayerStats(team_code_list,league_id,csv_name, team_names, league_name,season_id):
     team_counter=0
-    
     # iterating through every team in respective league
     for team in range(len(team_code_list)):
-        ps_stats=requests.get(ps,params={'team_id':team_code_list[team],'league_id':league_id},headers=headers)
+        condition=404
+        while condition!=200:
+            ps_stats=requests.get(ps,params={'team_id':team_code_list[team],'league_id':league_id,'season_id':season_id},headers=headers)
+            condition=ps_stats.status_code
+            if condition!=200:
+                print('\nrequesting again\n')
+        # ps_stats=requests.get(ps,params={'team_id':team_code_list[team],'league_id':league_id,'season_id':season_id},headers=headers)
+        # print(ps_stats.status_code,'\n')
         players_stats=ps_stats.json()['players']
         final_players_dict={}
         for count in players_stats:
@@ -61,8 +74,11 @@ def getPlayerStats(team_code_list,league_id,csv_name, team_names, league_name):
         
         team_counter+=1
     pl_players_df['league']=league_name
-    pl_players_df.to_csv(f'{csv_name}',index=False)
-    print(f'saved {csv_name}')
+    # print(csv_name)
+    final_csv_name=re.sub(r'\.',f'_{season_id}.',csv_name)
+    # print(final_csv_name)
+    pl_players_df.to_csv(f'{final_csv_name}',index=False)
+    print(f'saved {final_csv_name}')
     # pl_players_df=None
 
 
@@ -81,57 +97,65 @@ driver = init_driver()  # Initialize the driver once
 
 #league meta data containing the url, table_id from which we obtain the team_codes, league_code for the api, and name of the respective league data
 league_metadata={'La Liga':{
-                    'league_url':'https://fbref.com/en/comps/12/La-Liga-Stats',
-                    'table_id':'results2024-2025121_overall',
+                    'league_url':'https://fbref.com/en/comps/12/---La-Liga-Stats',
+                    'table_id':'results---121_overall',
                     'league_code':12,
                     'csv_name':'la_liga_player_stats.csv'
                 },
                 'Premier League':{
-                    'league_url':'https://fbref.com/en/comps/9/Premier-League-Stats',
-                    'table_id':'results2024-202591_overall',
+                    'league_url':'https://fbref.com/en/comps/9/---Premier-League-Stats',
+                    'table_id':'results---91_overall',
                     'league_code':9,
                     'csv_name':'premier_league_player_stats.csv'
                 },
                 'Bundesliga':{
-                    'league_url':'https://fbref.com/en/comps/20/Bundesliga-Stats',
-                    'table_id':'results2024-2025201_overall',
+                    'league_url':'https://fbref.com/en/comps/20/---Bundesliga-Stats',
+                    'table_id':'results---201_overall',
                     'league_code':20,
                     'csv_name':'bundesliga_player_stats.csv'
                 },
                 'Ligue 1':{
-                    'league_url':'https://fbref.com/en/comps/13/Ligue-1-Stats',
-                    'table_id':'results2024-2025131_overall',
+                    'league_url':'https://fbref.com/en/comps/13/---Ligue-1-Stats',
+                    'table_id':'results---131_overall',
                     'league_code':13,
                     'csv_name':'ligue1_player_stats.csv'
                 },
                 'Serie A':{
-                    'league_url':'https://fbref.com/en/comps/11/Serie-A-Stats',
-                    'table_id':'results2024-2025111_overall',
+                    'league_url':'https://fbref.com/en/comps/11/---Serie-A-Stats',
+                    'table_id':'results---111_overall',
                     'league_code':11,
                     'csv_name':'serie_a_player_stats.csv'
                 }
             }
+# years=['2024-2025','2023-2024','2022-2023','2021-2022','2020-2021','2019-2020','2018-2019']
+years=['2017-2018']
 
 # iterating through the different leagues
-for count in league_metadata:
-    print(f'{count}')
-    main_url = league_metadata[count]['league_url']  
-    print(main_url)  
-    # html_content = get_fbref_firefox(main_url)
-    html_content = get_fbref_firefox(driver, main_url)
-    
-    # finding the table from the league_url, and searching for the team_code in the hyperlink url
-    soup=BeautifulSoup(html_content,'lxml')
-    table=soup.find('table',{'id':league_metadata[count]['table_id']})
-    tbody=table.find('tbody')
-    rows=tbody.find_all('tr')
-    
-    # getting all the rows containing the name of the teams and corresponding hyperlinks
-    team_links=[x.find('td',{'class':'left'}).find('a') for x in rows]
-    # clearer when referring to html code of the site, but basically getting classNames and stuff to scrape name and code of teams
-    team_codes=[str(x).split('/')[3] for x in team_links]
-    team_names=[str(x).split('>')[1][:-3] for x in team_links]
-    
-    getPlayerStats(team_codes,league_metadata[count]['league_code'],league_metadata[count]['csv_name'],team_names,count)
-    
+for count in years:
+    for league_name in league_metadata:
+        main_url=league_metadata[league_name]['league_url']
+        main_url=re.sub('---',f'{count}/{count}-',main_url)
+        
+        table_id=league_metadata[league_name]['table_id']
+        table_id=re.sub('---',f'{count}',table_id)
+        
+        html_content = get_fbref_chrome(driver, main_url,table_id)
+        soup=BeautifulSoup(html_content,'lxml')
+        
+        table=soup.find('table',{'id':table_id})
+        tbody=table.find('tbody')
+        rows=tbody.find_all('tr')
+        
+        # getting all the rows containing the name of the teams and corresponding hyperlinks
+        team_links=[x.find('td',{'class':'left'}).find('a') for x in rows]
+        # clearer when referring to html code of the site, but basically getting classNames and stuff to scrape name and code of teams
+        team_codes=[str(x).split('/')[3] for x in team_links]
+        team_names=[str(x).split('>')[1][:-3] for x in team_links]
+        # print(count)
+        print(team_names,end='\n\n')
+        # print(team_codes)
+        getPlayerStats(team_codes,league_metadata[league_name]['league_code'],league_metadata[league_name]['csv_name'],team_names,league_name,count)
+        # break
+        time.sleep(10)
+        print('done sleeping',end='\n\n')
 driver.quit()
